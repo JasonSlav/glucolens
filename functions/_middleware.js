@@ -1,7 +1,5 @@
-const BACKEND_URL = 'https://jasonslav.pythonanywhere.com';
-
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
   
   const apiPaths = ['/upload', '/generate_chart', '/debug_col'];
@@ -9,6 +7,8 @@ export async function onRequest(context) {
     return context.next();
   }
 
+  // Gunakan env variable, fallback ke hardcode jika belum disetel
+  const BACKEND_URL = env.BACKEND_URL || 'https://jasonslav.pythonanywhere.com';
   url.hostname = new URL(BACKEND_URL).hostname;
   url.protocol = new URL(BACKEND_URL).protocol;
 
