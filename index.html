@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlucoLens — Dashboard Visualisasi Data Diabetes</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surf2: #1c2128;
+            --border: #30363d;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --warn: #f0883e;
+            --danger: #f85149;
+            --text: #e6edf3;
+            --muted: #7d8590;
+            --mono: 'IBM Plex Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-weight: 500;
+            font-size: 1rem;
+            color: var(--accent);
+            letter-spacing: .05em;
+        }
+
+        .logo span {
+            color: var(--muted);
+        }
+
+        .header-badge {
+            background: rgba(88, 166, 255, .1);
+            border: 1px solid rgba(88, 166, 255, .3);
+            color: var(--accent);
+            font-size: .7rem;
+            font-family: var(--mono);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: calc(100vh - 56px);
+        }
+
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 56px);
+            position: sticky;
+            top: 56px;
+        }
+
+        .section-label {
+            font-size: .65rem;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--muted);
+            margin-bottom: .75rem;
+        }
+
+        .upload-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s;
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(88, 166, 255, .04);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 1.8rem;
+            margin-bottom: .5rem;
+        }
+
+        .upload-zone p {
+            font-size: .8rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .upload-zone strong {
+            color: var(--accent);
+            font-size: .85rem;
+        }
+
+        .dataset-info {
+            display: none;
+            background: rgba(63, 185, 80, .08);
+            border: 1px solid rgba(63, 185, 80, .25);
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .8rem;
+        }
+
+        .dataset-info .fname {
+            font-family: var(--mono);
+            color: var(--green);
+            font-size: .78rem;
+            word-break: break-all;
+            margin-bottom: .25rem;
+        }
+
+        .dataset-info .fmeta {
+            color: var(--muted);
+            font-size: .75rem;
+        }
+
+        .ctrl-group {
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+
+        .ctrl-group label {
+            font-size: .75rem;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        select {
+            background: var(--surf2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            padding: .45rem .75rem;
+            font-size: .8rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            width: 100%;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237d8590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right .7rem center;
+            cursor: pointer;
+            transition: border-color .15s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        select option {
+            background: var(--surf2);
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: .4rem;
+        }
+
+        .chart-btn {
+            background: var(--surf2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 6px;
+            padding: .5rem .25rem;
+            font-size: .65rem;
+            font-family: var(--mono);
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .2rem;
+        }
+
+        .chart-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(88, 166, 255, .06);
+        }
+
+        .chart-btn.active {
+            border-color: var(--accent);
+            background: rgba(88, 166, 255, .12);
+            color: var(--accent);
+        }
+
+        .chart-btn .icon {
+            font-size: 1.1rem;
+        }
+
+        .btn-generate {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            border-radius: 6px;
+            padding: .65rem 1rem;
+            font-weight: 600;
+            font-size: .85rem;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity .15s, transform .1s;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        .btn-generate:hover {
+            opacity: .88;
+            transform: translateY(-1px);
+        }
+
+        .btn-generate:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-debug {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 6px;
+            padding: .45rem 1rem;
+            font-size: .75rem;
+            cursor: pointer;
+            width: 100%;
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: border-color .15s, color .15s;
+            margin-top: .4rem;
+        }
+
+        .btn-debug:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .main-area {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .welcome-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            gap: 1rem;
+        }
+
+        .welcome-state .big-icon {
+            font-size: 4rem;
+            opacity: .3;
+        }
+
+        .welcome-state h2 {
+            font-size: 1.4rem;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .welcome-state p {
+            color: var(--muted);
+            font-size: .85rem;
+            max-width: 360px;
+            line-height: 1.6;
+        }
+
+        .insights-row {
+            display: none;
+            flex-direction: column;
+            gap: .75rem;
+        }
+
+        .insight-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--border);
+            border-radius: 8px;
+            padding: .85rem 1rem;
+            display: flex;
+            gap: .75rem;
+            align-items: flex-start;
+            font-size: .82rem;
+            line-height: 1.6;
+            animation: slideIn .3s ease;
+        }
+
+        .insight-card.info {
+            border-left-color: var(--accent);
+        }
+
+        .insight-card.success {
+            border-left-color: var(--green);
+        }
+
+        .insight-card.warning {
+            border-left-color: var(--warn);
+        }
+
+        .insight-card.stat {
+            border-left-color: #bc8cff;
+        }
+
+        .insight-card.compare {
+            border-left-color: #ff7b72;
+        }
+
+        .insight-card.correlation {
+            border-left-color: #ffa657;
+        }
+
+        .insight-card.outlier {
+            border-left-color: var(--danger);
+        }
+
+        .insight-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .insight-content .title {
+            font-weight: 600;
+            color: var(--text);
+            font-size: .82rem;
+            margin-bottom: .2rem;
+        }
+
+        .insight-content .desc {
+            color: #8b949e;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-header h3 {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .badge-count {
+            background: rgba(88, 166, 255, .12);
+            border: 1px solid rgba(88, 166, 255, .25);
+            color: var(--accent);
+            font-size: .68rem;
+            font-family: var(--mono);
+            padding: 1px 6px;
+            border-radius: 12px;
+        }
+
+        .chart-area {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chart-header {
+            padding: .75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: .75rem;
+            font-family: var(--mono);
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .chart-header .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        .chart-body {
+            padding: 1rem;
+        }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted);
+            font-size: .8rem;
+            font-family: var(--mono);
+        }
+
+        .spinner::before {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            animation: spin .8s linear infinite;
+        }
+
+        .validation-box {
+            display: none;
+            background: rgba(240, 136, 62, .08);
+            border: 1px solid rgba(240, 136, 62, .35);
+            border-radius: 6px;
+            padding: .6rem .75rem;
+            font-size: .75rem;
+            line-height: 1.5;
+            color: var(--warn);
+            margin-bottom: .6rem;
+        }
+
+        .validation-box .v-title {
+            font-weight: 600;
+            margin-bottom: .2rem;
+        }
+
+        .validation-box .v-msg {
+            color: #8b949e;
+        }
+
+        .validation-box .v-sug {
+            margin-top: .4rem;
+            color: var(--accent);
+            font-size: .72rem;
+        }
+
+        .toast-wrap {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+
+        .toast {
+            background: var(--surf2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .8rem;
+            max-width: 320px;
+            animation: slideUp .3s ease;
+        }
+
+        .toast.error {
+            border-left: 3px solid var(--danger);
+        }
+
+        .toast.success {
+            border-left: 3px solid var(--green);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .4;
+            }
+        }
+
+        @media (max-width:768px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">GlucoLens</div>
+        <div class="header-badge">Kelompok 10 · Visualisasi Data</div>
+    </header>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div>
+                <div class="section-label">Dataset</div>
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" accept=".csv">
+                    <div class="upload-icon">📂</div>
+                    <strong>Klik atau drag CSV di sini</strong>
+                    <p>Hanya file .csv yang didukung</p>
+                </div>
+                <div class="dataset-info" id="datasetInfo">
+                    <div class="fname" id="datasetName">—</div>
+                    <div class="fmeta" id="datasetMeta">—</div>
+                </div>
+            </div>
+
+            <div id="ctrlSection" style="display:none">
+                <div class="section-label">Jenis Visualisasi</div>
+                <div class="chart-grid">
+                    <div class="chart-btn active" data-type="bar"><span class="icon">📊</span>Bar</div>
+                    <div class="chart-btn" data-type="pie"><span class="icon">🥧</span>Pie</div>
+                    <div class="chart-btn" data-type="heatmap"><span class="icon">🌡️</span>Heatmap</div>
+                    <div class="chart-btn" data-type="box"><span class="icon">📦</span>Box</div>
+                    <div class="chart-btn" data-type="scatter"><span class="icon">🔵</span>Scatter</div>
+                    <div class="chart-btn" data-type="histogram"><span class="icon">📉</span>Histogram</div>
+                    <div class="chart-btn" data-type="violin"><span class="icon">🎻</span>Violin</div>
+                    <div class="chart-btn" data-type="line"><span class="icon">📈</span>Line</div>
+                    <div class="chart-btn time-btn" data-type="time_series" style="display:none"><span
+                            class="icon">⏱️</span>Tren</div>
+                </div>
+            </div>
+
+            <div id="varSection" style="display:none">
+                <div class="section-label">Variabel</div>
+                <div class="ctrl-group" id="xColGroup">
+                    <label id="xColLabel">Kolom X (wajib)</label>
+                    <select id="xCol">
+                        <option value="">— Pilih kolom —</option>
+                    </select>
+                </div>
+                <div class="ctrl-group" id="yColGroup">
+                    <label id="yColLabel">Kolom Y (opsional)</label>
+                    <select id="yCol">
+                        <option value="">— Pilih kolom —</option>
+                    </select>
+                </div>
+                <div class="ctrl-group" id="colorColGroup">
+                    <label>Warna / Kelompok (opsional)</label>
+                    <select id="colorCol">
+                        <option value="">— Tidak ada —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="genSection" style="display:none">
+                <div class="validation-box" id="validationBox">
+                    <div class="v-title">⚠️ <span id="validationTitle"></span></div>
+                    <div class="v-msg" id="validationMsg"></div>
+                    <div class="v-sug" id="validationSug"></div>
+                </div>
+                <button class="btn-generate" id="btnGenerate" disabled>Visualisasi Data</button>
+                <button class="btn-debug" id="btnDebug" style="display:none" onclick="debugCol()">🔍 Cek Kolom
+                    X</button>
+            </div>
+
+            <div id="explorationSection" style="display:none; margin-top:.5rem;">
+                <div class="section-label" style="margin-bottom:.5rem;">Mode</div>
+                <label
+                    style="display:flex; align-items:center; gap:.5rem; cursor:pointer; font-size:.75rem; color:var(--muted);">
+                    <input type="checkbox" id="toggleExploration" style="accent-color:var(--accent);">
+                    🧪 Mode Eksplorasi (semua tipe variabel)
+                </label>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <div class="welcome-state" id="welcomeState">
+                <div class="big-icon">🗂️</div>
+                <h2>Upload dataset untuk mulai eksplorasi</h2>
+                <p>Drag & drop file CSV ke panel kiri, atau klik area upload untuk memilih file.</p>
+            </div>
+
+            <div class="insights-row" id="insightsRow">
+                <div class="section-header">
+                    <h3>Ringkasan Analisis</h3>
+                    <span class="badge-count" id="insightCount">0</span>
+                </div>
+                <div id="insightList"></div>
+            </div>
+
+            <div class="spinner" id="spinner">Memuat visualisasi...</div>
+
+            <div class="chart-area" id="chartArea">
+                <div class="chart-header">
+                    <div class="dot"></div>
+                    <span id="chartLabel">chart output</span>
+                </div>
+                <div class="chart-body" id="chartBody"></div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-wrap" id="toastWrap"></div>
+
+    <script>
+        'use strict';
+
+        let selectedChartType = 'bar';
+        let colTypes = null;
+        let explorationMode = false;
+
+        const CHART_CONFIG = {
+            bar:         { x:true,  y:true,  c:true,  xLbl:'Kolom X (wajib)',              yLbl:'Kolom Y Numerik (opsional)' },
+            histogram:   { x:true,  y:false, c:true,  xLbl:'Kolom Numerik (wajib)',        yLbl:'' },
+            box:         { x:true,  y:true,  c:true,  xLbl:'Kolom Kategori (wajib)',       yLbl:'Kolom Y Numerik (opsional)' },
+            scatter:     { x:true,  y:true,  c:true,  xLbl:'Kolom X Numerik (wajib)',      yLbl:'Kolom Y Numerik (wajib)' },
+            line:        { x:true,  y:true,  c:true,  xLbl:'Kolom X (wajib)',              yLbl:'Kolom Y Numerik (wajib)' },
+            pie:         { x:true,  y:false, c:false, xLbl:'Kolom Kategori (wajib)',       yLbl:'' },
+            heatmap:     { x:false, y:false, c:false, xLbl:'',                              yLbl:'' },
+            violin:      { x:true,  y:true,  c:true,  xLbl:'Kolom Kategori (wajib)',       yLbl:'Kolom Y Numerik (opsional)' },
+            time_series: { x:true,  y:true,  c:true,  xLbl:'Kolom Datetime (wajib)',       yLbl:'Kolom Y (wajib)' },
+        };
+
+        const CHART_VAR_RULES = {
+            bar: { x: ['numerik', 'kategorikal', 'datetime'], y: ['numerik'], color: ['numerik', 'kategorikal', 'datetime'] },
+            histogram: { x: ['numerik'], y: [], color: ['kategorikal', 'numerik'] },
+            box: { x: ['kategorikal', 'datetime'], y: ['numerik'], color: ['kategorikal', 'numerik'] },
+            violin: { x: ['kategorikal', 'datetime'], y: ['numerik'], color: ['kategorikal', 'numerik'] },
+            scatter: { x: ['numerik'], y: ['numerik'], color: ['numerik', 'kategorikal'] },
+            line: { x: ['numerik', 'datetime'], y: ['numerik'], color: ['kategorikal'] },
+            pie: { x: ['kategorikal'], y: [], color: [] },
+            time_series: { x: ['datetime'], y: ['numerik'], color: ['kategorikal'] },
+            heatmap: { x: [], y: [], color: [] }
+        };
+
+        function showToast(msg, type = 'info') {
+            const wrap = document.getElementById('toastWrap');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            wrap.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+        }
+
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleUpload(file);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) handleUpload(fileInput.files[0]);
+        });
+
+        async function handleUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showToast('Hanya file CSV yang didukung!', 'error');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', file);
+            uploadZone.style.opacity = '0.5';
+            uploadZone.style.pointerEvents = 'none';
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (!res.ok || data.error) { showToast(data.error || 'Gagal upload', 'error'); return; }
+
+                colTypes = data.col_types;
+
+                document.getElementById('datasetName').textContent = data.filename;
+                document.getElementById('datasetMeta').textContent =
+                    `${data.shape.rows.toLocaleString()} baris × ${data.shape.cols} kolom`;
+                document.getElementById('datasetInfo').style.display = 'block';
+                document.getElementById('ctrlSection').style.display = 'block';
+                document.getElementById('varSection').style.display = 'block';
+                document.getElementById('genSection').style.display = 'block';
+                document.getElementById('explorationSection').style.display = 'block';
+                document.getElementById('welcomeState').style.display = 'none';
+
+                if (data.has_datetime) {
+                    document.querySelectorAll('.time-btn').forEach(b => b.style.display = 'flex');
+                }
+
+                populateSelects(colTypes, 'bar');
+                updateUI();
+                renderInsights(data.insights);
+                showToast('Dataset berhasil dimuat ✓', 'success');
+
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                uploadZone.style.opacity = '1';
+                uploadZone.style.pointerEvents = 'auto';
+            }
+        }
+
+        function populateSelects(types, chartType = null) {
+            const xSel = document.getElementById('xCol');
+            const ySel = document.getElementById('yCol');
+            const colorSel = document.getElementById('colorCol');
+
+            const rules = chartType ? CHART_VAR_RULES[chartType] : null;
+
+            const prevX = xSel.value;
+            const prevY = ySel.value;
+            const prevC = colorSel.value;
+
+            function fillSelect(selEl, allowedTypes, prevVal) {
+                selEl.innerHTML = '<option value="">— Pilih kolom —</option>';
+                if (!allowedTypes || allowedTypes.length === 0) {
+                    selEl.value = '';
+                    return;
+                }
+
+                const groups = [
+                    { label: 'Numerik', cols: types.numeric },
+                    { label: 'Kategorikal', cols: types.categorical },
+                    { label: 'Datetime', cols: types.datetime },
+                ];
+
+                let foundPrev = false;
+                groups.forEach(g => {
+                    if (!allowedTypes.includes(g.label.toLowerCase())) return;
+                    if (!g.cols.length) return;
+
+                    const og = document.createElement('optgroup');
+                    og.label = g.label;
+                    g.cols.forEach(col => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = col;
+                        og.appendChild(opt);
+                        if (col === prevVal) foundPrev = true;
+                    });
+                    selEl.appendChild(og);
+                });
+
+                selEl.value = foundPrev ? prevVal : '';
+            }
+
+            fillSelect(xSel, rules ? rules.x : ['numerik', 'kategorikal', 'datetime'], prevX);
+            fillSelect(ySel, rules ? rules.y : ['numerik'], prevY);
+            fillSelect(colorSel, rules ? rules.color : ['numerik', 'kategorikal', 'datetime'], prevC);
+
+            document.getElementById('btnGenerate').disabled = false;
+            document.getElementById('btnDebug').style.display = 'block';
+        }
+
+        document.querySelectorAll('.chart-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedChartType = btn.dataset.type;
+                updateUI();
+            });
+        });
+
+        document.getElementById('xCol').addEventListener('change', validate);
+        document.getElementById('yCol').addEventListener('change', validate);
+        document.getElementById('colorCol').addEventListener('change', validate);
+        document.getElementById('toggleExploration').addEventListener('change', function() {
+            explorationMode = this.checked;
+            updateUI();
+        });
+
+        function updateUI() {
+            const cfg = CHART_CONFIG[selectedChartType] || CHART_CONFIG.bar;
+            document.getElementById('xColGroup').style.display = cfg.x ? 'flex' : 'none';
+            document.getElementById('yColGroup').style.display = cfg.y ? 'flex' : 'none';
+            document.getElementById('colorColGroup').style.display = cfg.c ? 'flex' : 'none';
+            if (cfg.x) document.getElementById('xColLabel').textContent = cfg.xLbl;
+            if (cfg.y) document.getElementById('yColLabel').textContent = cfg.yLbl;
+            if (colTypes) {
+                populateSelects(colTypes, explorationMode ? null : selectedChartType);
+            }
+            validate();
+        }
+
+        function validate() {
+            const box = document.getElementById('validationBox');
+            const tEl = document.getElementById('validationTitle');
+            const mEl = document.getElementById('validationMsg');
+            const sEl = document.getElementById('validationSug');
+
+            function warn(title, msg, sug = '') {
+                tEl.textContent = title;
+                mEl.textContent = msg;
+                sEl.textContent = sug ? '💡 ' + sug : '';
+                box.style.display = 'block';
+            }
+            function clear() { box.style.display = 'none'; }
+
+            if (!colTypes || selectedChartType === 'heatmap') { clear(); return; }
+
+            const cfg = CHART_CONFIG[selectedChartType];
+            const xCol = cfg.x ? document.getElementById('xCol').value : null;
+            const yCol = cfg.y ? document.getElementById('yCol').value : null;
+
+            if (cfg.x && !xCol) { clear(); return; }
+
+            const isNumX = xCol && colTypes.numeric.includes(xCol);
+            const isNumY = yCol && colTypes.numeric.includes(yCol);
+            const isDtX = xCol && colTypes.datetime.includes(xCol);
+            const safeNum = colTypes.numeric.filter(c => !/id$/i.test(c));
+
+            if (selectedChartType === 'scatter') {
+                if (!isNumX || !isNumY)
+                    return warn('Butuh 2 Kolom Numerik', 'Scatter membutuhkan X dan Y keduanya numerik.',
+                        safeNum.length >= 2 ? `Coba X="${safeNum[0]}", Y="${safeNum[1]}"` : '');
+            } else if (selectedChartType === 'histogram') {
+                if (!isNumX)
+                    return warn('X Harus Numerik', 'Histogram menampilkan distribusi angka.',
+                        safeNum[0] ? `Ganti X dengan "${safeNum[0]}"` : '');
+            } else if (selectedChartType === 'time_series') {
+                if (!isDtX)
+                    return warn('X Harus Datetime', 'Time series butuh kolom tanggal/waktu di X.',
+                        colTypes.datetime[0] ? `Ganti X dengan "${colTypes.datetime[0]}"` : 'Dataset tidak punya kolom datetime');
+            } else if (selectedChartType === 'line' && yCol && !isNumY) {
+                return warn('Y Harus Numerik', 'Line chart membutuhkan nilai angka di Y.',
+                    safeNum[0] ? `Ganti Y dengan "${safeNum[0]}"` : '');
+            } else if ((selectedChartType === 'box' || selectedChartType === 'violin') && yCol && !isNumY) {
+                return warn('Y Harus Numerik', `${selectedChartType} plot membutuhkan nilai angka di Y.`,
+                    safeNum[0] ? `Ganti Y dengan "${safeNum[0]}"` : '');
+            }
+
+            clear();
+        }
+
+        document.getElementById('btnGenerate').addEventListener('click', generateChart);
+
+        async function generateChart() {
+            const cfg = CHART_CONFIG[selectedChartType];
+            const isHeatmap = selectedChartType === 'heatmap';
+            const xCol = (cfg.x && !isHeatmap) ? document.getElementById('xCol').value || null : null;
+            const yCol = (cfg.y && !isHeatmap) ? document.getElementById('yCol').value || null : null;
+            const colorCol = (cfg.c && !isHeatmap) ? document.getElementById('colorCol').value || null : null;
+
+            if (!isHeatmap && !xCol) {
+                showToast('Pilih kolom X terlebih dahulu', 'error');
+                return;
+            }
+
+            const spinner = document.getElementById('spinner');
+            const chartArea = document.getElementById('chartArea');
+            const chartBody = document.getElementById('chartBody');
+
+            spinner.style.display = 'block';
+            chartArea.style.display = 'none';
+            chartBody.innerHTML = '';
+
+            try {
+                const res = await fetch('/generate_chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chart_type: selectedChartType, x_col: xCol, y_col: yCol, color_col: colorCol })
+                });
+                const data = await res.json();
+                if (data.error) { showToast(data.error, 'error'); return; }
+
+                const div = document.createElement('div');
+                div.id = 'plotly-chart';
+                div.style.cssText = 'width:100%; height:500px;';
+                chartBody.appendChild(div);
+
+                await Plotly.newPlot(div, data.plotly_json.data, data.plotly_json.layout, {
+                    responsive: true,
+                    doubleClick: 'reset',
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+                    displaylogo: false,
+                    scrollZoom: false,
+                });
+
+                Plotly.Plots.resize(div);
+
+                document.getElementById('chartLabel').textContent =
+                    isHeatmap ? 'Correlation Heatmap' : `${selectedChartType.toUpperCase()} · x=${xCol}${yCol ? ' · y=' + yCol : ''}`;
+                chartArea.style.display = 'block';
+                chartArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (err) {
+                showToast('Gagal membuat visualisasi: ' + err.message, 'error');
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function debugCol() {
+            const xCol = document.getElementById('xCol').value;
+            if (!xCol) { showToast('Pilih kolom X dulu', 'error'); return; }
+            try {
+                const res = await fetch('/debug_col', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ col: xCol })
+                });
+                const d = await res.json();
+                if (d.error) { showToast(d.error, 'error'); return; }
+                showToast(`${d.col} | dtype: ${d.dtype} | nunique: ${d.nunique} | nulls: ${d.null_count} | sample: [${d.sample.slice(0, 3).join(', ')}]`, 'success');
+            } catch (e) {
+                showToast('Debug error: ' + e.message, 'error');
+            }
+        }
+
+        function renderInsights(insights) {
+            const list = document.getElementById('insightList');
+            const cnt = document.getElementById('insightCount');
+            const row = document.getElementById('insightsRow');
+            list.innerHTML = '';
+            insights.forEach(ins => {
+                const card = document.createElement('div');
+                card.className = `insight-card ${ins.type}`;
+                card.innerHTML = `
+            <div class="insight-icon">${ins.icon}</div>
+            <div class="insight-content">
+                <div class="title">${ins.title}</div>
+                <div class="desc">${ins.text}</div>
+            </div>`;
+                list.appendChild(card);
+            });
+            cnt.textContent = insights.length;
+            row.style.display = 'flex';
+        }
+    </script>
+</body>
+
+</html>
